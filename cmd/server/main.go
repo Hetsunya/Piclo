@@ -2,32 +2,20 @@ package main
 
 import (
 	"log"
-	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"Piclo/internal/config"
+	"Piclo/internal/handler"
 
 )
 
 func main() {
-	router := gin.Default()
+	cfg := config.Load()
 
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
-		})
-	})
+	router := handler.NewRouter(cfg)
 
-	router.POST("/upload", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Not implemented",
-		})
-	})
+	serverAddr := ":" + cfg.Port
+	if err := router.Run(serverAddr); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 
-	router.GET("/image/:id", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Not implemented",
-		})
-	})
-
-	log.Fatal(router.Run(":9090"))
 }
