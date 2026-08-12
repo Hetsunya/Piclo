@@ -1,5 +1,7 @@
 version: '3.8'
+
 services:
+  # 1. База данных
   db:
     image: postgres:16-alpine
     environment:
@@ -7,21 +9,66 @@ services:
       POSTGRES_PASSWORD: piclo
       POSTGRES_DB: piclo
     ports:
-      - "5433:5432"
+      - "5433:5432" # Наружу 5433, чтобы не конфликтовать с локальной БД
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U piclo -d piclo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Объектное хранилище
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000" # API порт
-      - "9001:9001" # Web-консоль
+      - "9000:9000" # API
+      - "9001:9001" # Консоль
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Go Бэкенд
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9090:9090"
+    environment:
+      PORT: 9090
+      DATABASE_URL: postgres://piclo:piclo@db:5432/piclo?sslmode=disable # Внутренний порт 5432!
+      PUBLIC_URL: http://localhost:5173 # Ссылка для пользователя
+      MINIO_ENDPOINT: minio:9000 # Внутреннее имя сервиса minio
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: piclo-images
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 4. React Фронтенд (Nginx раздает статику и проксирует API)
+  frontend:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+    ports:
+      - "5173:80" # Наружу 5173, внутри nginx слушает 80
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   pgdata:
-  minio_data: # <-- Добавь это в конец файла
+  minio_data:
