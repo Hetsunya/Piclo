@@ -17,6 +17,19 @@ import (
 
 func NewRouter(cfg *config.Config, imgService *service.ImageService) *gin.Engine {
 	router := gin.Default()
+
+	// router.Use(func(c *gin.Context) {
+	// 	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	// 	c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	// 	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	// 	if c.Request.Method == "OPTIONS" {
+	// 		c.AbortWithStatus(204)
+	// 		return
+	// 	}
+	// 	c.Next()
+	// })
+
 	router.SetTrustedProxies(nil)
 
 	// Создаем папку storage при старте, если её нет
