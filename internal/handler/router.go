@@ -1,41 +1,19 @@
 package handler
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 
 	"Piclo/internal/config"
 	"Piclo/internal/service"
+	"Piclo/internal/storage"
 )
 
-func NewRouter(cfg *config.Config, imgService *service.ImageService) *gin.Engine {
+func NewRouter(cfg *config.Config, imgService *service.ImageService, store storage.Storage) *gin.Engine {
 	router := gin.Default()
-
-	// router.Use(func(c *gin.Context) {
-	// 	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	// 	c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	// 	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	// 	if c.Request.Method == "OPTIONS" {
-	// 		c.AbortWithStatus(204)
-	// 		return
-	// 	}
-	// 	c.Next()
-	// })
-
 	router.SetTrustedProxies(nil)
-
-	// Создаем папку storage при старте, если её нет
-	if err := os.MkdirAll("storage", 0755); err != nil {
-		panic(fmt.Sprintf("failed to create storage dir: %v", err))
-	}
 
 	api := router.Group("/api/v1")
 	{
@@ -46,7 +24,7 @@ func NewRouter(cfg *config.Config, imgService *service.ImageService) *gin.Engine
 	}
 
 	router.GET("/image/:id", func(c *gin.Context) {
-		imageHandler(c, imgService)
+		imageHandler(c, imgService, store)
 	})
 
 	return router
@@ -62,7 +40,6 @@ func uploadHandler(c *gin.Context, imgService *service.ImageService, publicURL s
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		// Если ошибка из-за превышения размера, MaxBytesReader вернет специфичную ошибку
 		if err.Error() == "http: request body too large" {
 			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "file size exceeds 10MB limit"})
 			return
@@ -71,57 +48,36 @@ func uploadHandler(c *gin.Context, imgService *service.ImageService, publicURL s
 		return
 	}
 
-	// 1. Процессим файл (проверка MIME, генерация ID и правильного расширения)
-	id, storageKey, mimeType, size, err := imgService.Process(file)
-	if err != nil {
-		if err.Error() == "unsupported file type" {
-			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "only jpg, png, gif, webp are allowed"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal processing error"})
-		return
-	}
+	ctx := c.Request.Context()
+	id, err := imgService.ProcessAndUpload(ctx, file)
 
-	// 2. Сохраняем физический файл на диск
-	destPath := filepath.Join("storage", storageKey)
-	if err := c.SaveUploadedFile(file, destPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
-		return
-	}
-
-	// 3. Сохраняем метаданные в PostgreSQL
-	ctx := context.Background()
-	if err := imgService.SaveMetadata(ctx, id, file.Filename, mimeType, storageKey, size); err != nil {
-		log.Printf("!!! РЕАЛЬНАЯ ОШИБКА БД: %v !!!", err) // <-- ВСТАВИТЬ РОВНО ЭТУ СТРОКУ
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save metadata to database"})
-		return
-	}
-
-	// 4. Возвращаем успешный ответ
 	c.JSON(http.StatusCreated, gin.H{
 		"id":  id,
 		"url": fmt.Sprintf("%s/image/%s", publicURL, id),
 	})
 }
 
-func imageHandler(c *gin.Context, imgService *service.ImageService) {
+func imageHandler(c *gin.Context, imgService *service.ImageService, store storage.Storage) {
 	id := c.Param("id")
 
-	// 1. Ищем запись в БД (никаких filepath.Glob!)
-	ctx := context.Background()
+	ctx := c.Request.Context()
 	img, err := imgService.GetImage(ctx, id)
+
+	// Получаем объект из MinIO
+	obj, err := store.GetObject(ctx, img.StorageKey)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found in storage"})
+		return
+	}
+	defer obj.Close()
+
+	// Получаем размер объекта через Stat()
+	info, err := obj.Stat()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get file info"})
 		return
 	}
 
-	// 2. Формируем путь к файлу на основе storageKey из БД
-	filePath := filepath.Join("storage", img.StorageKey)
-
-	// 3. Отдаем файл. Gin сам определит Content-Type по расширению файла и отдаст его
-	c.File(filePath)
+	// Отдаем поток напрямую из MinIO клиенту
+	c.DataFromReader(http.StatusOK, info.Size, img.MIMEType, obj, nil)
 }

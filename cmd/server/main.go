@@ -10,30 +10,39 @@ import (
 	"Piclo/internal/handler"
 	"Piclo/internal/repository"
 	"Piclo/internal/service"
+	"Piclo/internal/storage"
 )
 
 func main() {
 	cfg := config.Load()
 
-	// 1. Подключение к БД
-	ctx := context.Background()
-
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("DB pool creation failed: %v", err)
+		log.Fatalf("DB connection failed: %v", err)
+	}
+
+	// пингуем БД
+	if err := pool.Ping(context.Background()); err != nil {
+		log.Fatalf("DB ping failed: %v", err)
 	}
 	defer pool.Close()
 
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("DB ping failed: %v", err)
+	// Инициализация MinIO
+	minioStore, err := storage.NewMinIOStorage(
+		cfg.MinIOEndpoint,
+		cfg.MinIOAccessKey,
+		cfg.MinIOSecretKey,
+		cfg.MinIOBucket,
+		false, // useSSL = false для локального dev
+	)
+	if err != nil {
+		log.Fatalf("MinIO connection failed: %v", err)
 	}
 
-	// 2. Инициализация слоев
 	repo := repository.NewImageRepository(pool)
-	imgService := service.NewImageService(repo)
+	imgService := service.NewImageService(repo, minioStore)
 
-	// 3. Запуск сервера
-	router := handler.NewRouter(cfg, imgService)
+	router := handler.NewRouter(cfg, imgService, minioStore)
 
 	serverAddr := ":" + cfg.Port
 	log.Printf("Starting server on %s", serverAddr)
