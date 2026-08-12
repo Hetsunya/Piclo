@@ -65,6 +65,9 @@ func (s *ImageService) ProcessAndUpload(ctx context.Context, file *multipart.Fil
 		return "", err
 	}
 
+	// Рассчитываем время жизни
+	expiresAt := time.Now().Add(1 * time.Hour)
+
 	// Сохраняем метаданные в БД
 	img := &model.Image{
 		ID:         id,
@@ -73,6 +76,7 @@ func (s *ImageService) ProcessAndUpload(ctx context.Context, file *multipart.Fil
 		Size:       file.Size,
 		StorageKey: storageKey,
 		CreatedAt:  time.Now(),
+		ExpiresAt:  &expiresAt,
 	}
 
 	err = s.repo.Save(ctx, img)

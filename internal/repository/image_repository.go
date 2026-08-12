@@ -37,3 +37,30 @@ func (r *ImageRepository) GetByID(ctx context.Context, id string) (*model.Image,
 	}
 	return img, nil
 }
+
+// GetExpired возвращает список картинок, у которых истек срок жизни
+func (r *ImageRepository) GetExpired(ctx context.Context) ([]model.Image, error) {
+	query := `SELECT id, storage_key FROM images WHERE expires_at IS NOT NULL AND expires_at < NOW()`
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []model.Image
+	for rows.Next() {
+		var img model.Image
+		if err := rows.Scan(&img.ID, &img.StorageKey); err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	return images, rows.Err()
+}
+
+// Delete удаляет запись о картинке из БД
+func (r *ImageRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM images WHERE id = $1`
+	_, err := r.pool.Exec(ctx, query, id)
+	return err
+}

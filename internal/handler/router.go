@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx"
 
 	"Piclo/internal/config"
 	"Piclo/internal/service"
@@ -59,11 +62,28 @@ func uploadHandler(c *gin.Context, imgService *service.ImageService, publicURL s
 
 func imageHandler(c *gin.Context, imgService *service.ImageService, store storage.Storage) {
 	id := c.Param("id")
-
 	ctx := c.Request.Context()
+
 	img, err := imgService.GetImage(ctx, id)
 
-	// Получаем объект из MinIO
+	// 1. Жесткая проверка на ошибку с использованием errors.Is
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Image not found or expired"})
+			return
+		}
+		log.Printf("DB error in imageHandler: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+		return
+	}
+
+	// 2. Дополнительная защита от nil (на случай магии Go)
+	if img == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
+		return
+	}
+
+	// 3. Получаем объект из MinIO
 	obj, err := store.GetObject(ctx, img.StorageKey)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found in storage"})
@@ -71,13 +91,13 @@ func imageHandler(c *gin.Context, imgService *service.ImageService, store storag
 	}
 	defer obj.Close()
 
-	// Получаем размер объекта через Stat()
+	// 4. Получаем размер объекта
 	info, err := obj.Stat()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get file info"})
 		return
 	}
 
-	// Отдаем поток напрямую из MinIO клиенту
+	// 5. Отдаем поток
 	c.DataFromReader(http.StatusOK, info.Size, img.MIMEType, obj, nil)
 }

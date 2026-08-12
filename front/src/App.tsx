@@ -7,6 +7,7 @@ interface UploadResponse {
 }
 
 function App() {
+  const [ttl, setTtl] = useState<number>(1) // по умолчанию 1 час
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<UploadResponse | null>(null)
@@ -95,7 +96,6 @@ function App() {
           {file.name} — {(file.size / 1024 / 1024).toFixed(2)} MB
         </p>
       )}
-
       <button className="btn" onClick={upload} disabled={!file || loading}>
         {loading ? 'Загрузка...' : 'Загрузить'}
       </button>
