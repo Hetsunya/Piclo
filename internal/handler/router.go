@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 
 	"Piclo/internal/config"
 	"Piclo/internal/service"
@@ -15,23 +18,23 @@ func NewRouter(cfg *config.Config, imgService *service.ImageService, store stora
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
 
+	// 1. API Endpoints (для React и внешних клиентов)
 	api := router.Group("/api/v1")
 	{
 		api.GET("/health", healthHandler)
+
 		api.POST("/upload", func(c *gin.Context) {
 			uploadHandler(c, imgService, cfg.PublicURL)
 		})
-		// Новый endpoint для сырых файлов
+
+		// Сырой файл (для тега <img> в React и превью в мессенджерах)
 		api.GET("/image/:id/raw", func(c *gin.Context) {
 			imageRawHandler(c, imgService, store)
 		})
 	}
 
-	// Опционально: редирект с /image/:id на фронтенд
-	router.GET("/image/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		c.Redirect(http.StatusMovedPermanently, fmt.Sprintf("%s/image/%s", cfg.PublicURL, id))
-	})
+	// 2. UI роутинг полностью делегирован React (Vite проксирует /api/* на Go)
+	// Мы больше не делаем редиректы здесь, чтобы не ломать SPA-навигацию.
 
 	return router
 }
@@ -55,8 +58,20 @@ func uploadHandler(c *gin.Context, imgService *service.ImageService, publicURL s
 	}
 
 	ctx := c.Request.Context()
-	id, err := imgService.ProcessAndUpload(ctx, file)
 
+	// 🔴 FIX 1: ЖЕСТКАЯ ПРОВЕРКА ОШИБКИ
+	id, err := imgService.ProcessAndUpload(ctx, file)
+	if err != nil {
+		if err.Error() == "unsupported file type" {
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "only jpg, png, gif, webp are allowed"})
+			return
+		}
+		log.Printf("Upload error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal processing error"})
+		return
+	}
+
+	// 🔴 FIX 3: URL теперь будет корректным, если в .env указано PUBLIC_URL=http://localhost:5173
 	c.JSON(http.StatusCreated, gin.H{
 		"id":  id,
 		"url": fmt.Sprintf("%s/image/%s", publicURL, id),
@@ -69,7 +84,11 @@ func imageRawHandler(c *gin.Context, imgService *service.ImageService, store sto
 
 	img, err := imgService.GetImage(ctx, id)
 	if err != nil || img == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found or expired"})
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Image not found or expired"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
 

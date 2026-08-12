@@ -66,7 +66,7 @@ func (s *ImageService) ProcessAndUpload(ctx context.Context, file *multipart.Fil
 	}
 
 	// Рассчитываем время жизни
-	expiresAt := time.Now().Add(1 * time.Second) // 1 секунда для теста, можно изменить на 24*time.Hour
+	expiresAt := time.Now().Add(1 * time.Hour)
 
 	// Сохраняем метаданные в БД
 	img := &model.Image{
