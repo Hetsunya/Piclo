@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx"
 
 	"Piclo/internal/config"
 	"Piclo/internal/service"
@@ -24,10 +21,16 @@ func NewRouter(cfg *config.Config, imgService *service.ImageService, store stora
 		api.POST("/upload", func(c *gin.Context) {
 			uploadHandler(c, imgService, cfg.PublicURL)
 		})
+		// Новый endpoint для сырых файлов
+		api.GET("/image/:id/raw", func(c *gin.Context) {
+			imageRawHandler(c, imgService, store)
+		})
 	}
 
+	// Опционально: редирект с /image/:id на фронтенд
 	router.GET("/image/:id", func(c *gin.Context) {
-		imageHandler(c, imgService, store)
+		id := c.Param("id")
+		c.Redirect(http.StatusMovedPermanently, fmt.Sprintf("%s/image/%s", cfg.PublicURL, id))
 	})
 
 	return router
@@ -60,30 +63,16 @@ func uploadHandler(c *gin.Context, imgService *service.ImageService, publicURL s
 	})
 }
 
-func imageHandler(c *gin.Context, imgService *service.ImageService, store storage.Storage) {
+func imageRawHandler(c *gin.Context, imgService *service.ImageService, store storage.Storage) {
 	id := c.Param("id")
 	ctx := c.Request.Context()
 
 	img, err := imgService.GetImage(ctx, id)
-
-	// 1. Жесткая проверка на ошибку с использованием errors.Is
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Image not found or expired"})
-			return
-		}
-		log.Printf("DB error in imageHandler: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+	if err != nil || img == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found or expired"})
 		return
 	}
 
-	// 2. Дополнительная защита от nil (на случай магии Go)
-	if img == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
-		return
-	}
-
-	// 3. Получаем объект из MinIO
 	obj, err := store.GetObject(ctx, img.StorageKey)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found in storage"})
@@ -91,13 +80,11 @@ func imageHandler(c *gin.Context, imgService *service.ImageService, store storag
 	}
 	defer obj.Close()
 
-	// 4. Получаем размер объекта
 	info, err := obj.Stat()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get file info"})
 		return
 	}
 
-	// 5. Отдаем поток
 	c.DataFromReader(http.StatusOK, info.Size, img.MIMEType, obj, nil)
 }
