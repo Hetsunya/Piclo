@@ -11,18 +11,6 @@ Piclo is a modern image management service built with Go and React. It provides 
 - RESTful API endpoints
 - Responsive web interface
 
-## Architecture
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Frontend  │    │   Backend   │    │   Storage   │
-│   (React)   │───▶│   (Go)      │───▶│   (MinIO)   │
-└─────────────┘    │             │    └─────────────┘
-                   │             │
-                   │             │
-                   └─────────────┘
-```
-
 ## Technologies Used
 
 ### Backend
