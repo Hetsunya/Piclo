@@ -23,7 +23,7 @@ func NewTTLWorker(repo *repository.ImageRepository, store storage.Storage, inter
 	}
 }
 
-// Run запускает фоновую очистку. Блокирует выполнение до отмены контекста.
+// Run starts background cleanup. Blocks execution until context cancellation.
 func (w *TTLWorker) Run(ctx context.Context) {
 	log.Printf("TTL Worker started with interval: %v", w.interval)
 	ticker := time.NewTicker(w.interval)
@@ -41,7 +41,7 @@ func (w *TTLWorker) Run(ctx context.Context) {
 }
 
 func (w *TTLWorker) cleanup(ctx context.Context) {
-	// 1. Находим просроченные записи
+	// 1. Find expired records
 	expiredImages, err := w.repo.GetExpired(ctx)
 	if err != nil {
 		log.Printf("TTL Worker: failed to get expired images: %v", err)
@@ -49,21 +49,21 @@ func (w *TTLWorker) cleanup(ctx context.Context) {
 	}
 
 	if len(expiredImages) == 0 {
-		return // Нечего удалять
+		return // Nothing to delete
 	}
 
 	log.Printf("TTL Worker: found %d expired images, starting cleanup...", len(expiredImages))
 
-	// 2. Удаляем каждую
+	// 2. Delete each one
 	for _, img := range expiredImages {
-		// Сначала удаляем из MinIO.
-		// ВАЖНО: Если MinIO упадет, запись в БД останется, и воркер попробует снова через минуту (идемпотентность).
+		// First delete from MinIO.
+		// IMPORTANT: If MinIO fails, the DB record will remain, and worker will retry in a minute (idempotent).
 		if err := w.store.Delete(ctx, img.StorageKey); err != nil {
 			log.Printf("TTL Worker: failed to delete from storage %s: %v", img.StorageKey, err)
-			continue // Пропускаем удаление из БД, чтобы попробовать снова позже
+			continue // Skip DB deletion, try again later
 		}
 
-		// Затем удаляем из PostgreSQL
+		// Then delete from PostgreSQL
 		if err := w.repo.Delete(ctx, img.ID); err != nil {
 			log.Printf("TTL Worker: failed to delete from DB id %s: %v", img.ID, err)
 		} else {

@@ -16,12 +16,13 @@ import (
 	"Piclo/internal/service"
 	"Piclo/internal/storage"
 	"Piclo/internal/worker"
+
 )
 
 func main() {
 	cfg := config.Load()
 
-	//База данных
+	// Database
 	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("DB connection failed: %v", err)
@@ -31,7 +32,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	//MinIO
+	// MinIO
 	minioStore, err := storage.NewMinIOStorage(
 		cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey, cfg.MinIOBucket, false,
 	)
@@ -39,40 +40,41 @@ func main() {
 		log.Fatalf("MinIO connection failed: %v", err)
 	}
 
-	//Зависимости
+	// Dependencies
 	repo := repository.NewImageRepository(pool)
 	imgService := service.NewImageService(repo, minioStore)
 	router := handler.NewRouter(cfg, imgService, minioStore)
 
-	// Запуск TTL Воркера в отдельной горутине
-	// Создаем корневой контекст с возможностью отмены
+	// Start TTL Worker in a separate goroutine
+	// Create root context with cancellation capability
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Воркер будет проверять базу каждые 1 минуту
+	// Worker checks database every 1 minute
 	ttlWorker := worker.NewTTLWorker(repo, minioStore, 1*time.Minute)
 	go ttlWorker.Run(ctx)
 
-	// Запуск HTTP сервера
+	// Start HTTP server
 	serverAddr := ":" + cfg.Port
 	log.Printf("Starting server on %s", serverAddr)
 
-	// Запускаем сервер в горутине, чтобы иметь возможность перехватить сигналы ОС
+	// Run server in goroutine to handle OS signals
 	go func() {
 		if err := router.Run(serverAddr); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
-	// Ожидание сигнала завершения (Ctrl+C)
+	// Wait for shutdown signal (Ctrl+C)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutting down server...")
 
-	// Отменяем контекст, чтобы воркер корректно остановился
+	// Cancel context to stop worker gracefully
 	cancel()
 
-	// Даем воркеру пару секунд на завершение текущей итерации (опционально, но хорошая практика)
+	// Give worker a couple of seconds to finish current iteration (optional but good practice)
 	time.Sleep(2 * time.Second)
 	log.Println("Server and workers stopped gracefully")
 }
+

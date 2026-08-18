@@ -12,13 +12,14 @@ import (
 	"Piclo/internal/config"
 	"Piclo/internal/service"
 	"Piclo/internal/storage"
+
 )
 
 func NewRouter(cfg *config.Config, imgService *service.ImageService, store storage.Storage) *gin.Engine {
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
 
-	// 1. API Endpoints (для React и внешних клиентов)
+	// API Endpoints (for React and external clients)
 	api := router.Group("/api/v1")
 	{
 		api.GET("/health", healthHandler)
@@ -27,15 +28,14 @@ func NewRouter(cfg *config.Config, imgService *service.ImageService, store stora
 			uploadHandler(c, imgService, cfg.PublicURL)
 		})
 
-		// Сырой файл (для тега <img> в React и превью в мессенджерах)
+		// Raw file (for <img> tag in React and previews in messengers)
 		api.GET("/image/:id/raw", func(c *gin.Context) {
 			imageRawHandler(c, imgService, store)
 		})
 	}
 
-	// 2. UI роутинг полностью делегирован React (Vite проксирует /api/* на Go)
-	// Мы больше не делаем редиректы здесь, чтобы не ломать SPA-навигацию.
-
+	// UI routing is fully delegated to React (Vite proxies /api/* to Go)
+	// We no longer do redirects here to avoid breaking SPA navigation.
 	return router
 }
 
@@ -59,7 +59,7 @@ func uploadHandler(c *gin.Context, imgService *service.ImageService, publicURL s
 
 	ctx := c.Request.Context()
 
-	// 🔴 FIX 1: ЖЕСТКАЯ ПРОВЕРКА ОШИБКИ
+	// STRICT ERROR CHECKING
 	id, err := imgService.ProcessAndUpload(ctx, file)
 	if err != nil {
 		if err.Error() == "unsupported file type" {
@@ -71,7 +71,7 @@ func uploadHandler(c *gin.Context, imgService *service.ImageService, publicURL s
 		return
 	}
 
-	// 🔴 FIX 3: URL теперь будет корректным, если в .env указано PUBLIC_URL=http://localhost:5173
+	// URL will now be correct if PUBLIC_URL=http://localhost:5173 is set in .env
 	c.JSON(http.StatusCreated, gin.H{
 		"id":  id,
 		"url": fmt.Sprintf("%s/image/%s", publicURL, id),
@@ -107,3 +107,4 @@ func imageRawHandler(c *gin.Context, imgService *service.ImageService, store sto
 
 	c.DataFromReader(http.StatusOK, info.Size, img.MIMEType, obj, nil)
 }
+

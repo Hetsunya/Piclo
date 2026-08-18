@@ -37,7 +37,7 @@ func (s *ImageService) ProcessAndUpload(ctx context.Context, file *multipart.Fil
 	}
 	defer src.Close()
 
-	// Читаем первые 512 байт для определения MIME
+	// Read first 512 bytes to determine MIME type
 	buffer := make([]byte, 512)
 	_, err = src.Read(buffer)
 	if err != nil {
@@ -53,22 +53,22 @@ func (s *ImageService) ProcessAndUpload(ctx context.Context, file *multipart.Fil
 	id := ksuid.New().String()
 	storageKey := id + ext
 
-	// Сбрасываем указатель в начало файла
+	// Reset file pointer to beginning
 	_, err = src.Seek(0, 0)
 	if err != nil {
 		return "", err
 	}
 
-	// Загружаем в MinIO
+	// Upload to MinIO
 	err = s.store.Upload(ctx, storageKey, src, file.Size, contentType)
 	if err != nil {
 		return "", err
 	}
 
-	// Рассчитываем время жизни
+	// Calculate expiration time
 	expiresAt := time.Now().Add(1 * time.Hour)
 
-	// Сохраняем метаданные в БД
+	// Save metadata to DB
 	img := &model.Image{
 		ID:         id,
 		Filename:   file.Filename,
@@ -81,7 +81,7 @@ func (s *ImageService) ProcessAndUpload(ctx context.Context, file *multipart.Fil
 
 	err = s.repo.Save(ctx, img)
 	if err != nil {
-		// Удаляем файл из MinIO, если БД упала
+		// Delete file from MinIO if DB fails
 		_ = s.store.Delete(ctx, storageKey)
 		return "", err
 	}
