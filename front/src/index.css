@@ -1,21 +1,230 @@
 /* === БАЗОВЫЕ СТИЛИ === */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; padding: 40px 20px; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 40px 20px; }
 
-.container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-h1 { text-align: center; margin-bottom: 24px; }
+.page-wrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+}
 
-.drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; }
-.drop-zone:hover, .drop-zone.active { border-color: #007bff; background: #f0f8ff; }
+.language-switcher {
+  position: absolute;
+  top: -60px;
+  right: 0;
+  z-index: 10;
+}
+
+.lang-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.lang-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.lang-option {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.lang-btn.active .lang-option:first-child,
+.lang-btn:not(.active) .lang-option:last-child {
+  opacity: 1;
+  font-weight: 700;
+}
+
+.lang-divider {
+  opacity: 0.3;
+}
+
+.container { 
+  background: white; 
+  padding: 40px 30px; 
+  border-radius: 16px; 
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+h1 { 
+  text-align: center; 
+  margin-bottom: 8px;
+  font-size: 28px;
+  color: #333;
+}
+
+.subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 15px;
+}
+
+.drop-zone { 
+  border: 2px dashed #ddd; 
+  border-radius: 12px; 
+  padding: 50px 30px; 
+  text-align: center; 
+  cursor: pointer; 
+  transition: all 0.3s;
+  background: #fafafa;
+}
+
+.drop-zone:hover, .drop-zone.active { 
+  border-color: #667eea; 
+  background: linear-gradient(135deg, #f5f7ff 0%, #f0f4ff 100%);
+  transform: scale(1.02);
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.dropzone-icon {
+  font-size: 48px;
+  opacity: 0.7;
+}
+
 input[type="file"] { display: none; }
 
-.btn { display: block; width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 20px; text-decoration: none; text-align: center; }
-.btn:disabled { background: #ccc; cursor: not-allowed; }
-.btn:hover { background: #0056b3; }
+.btn { 
+  display: block; 
+  width: 100%; 
+  padding: 14px; 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white; 
+  border: none; 
+  border-radius: 8px; 
+  font-size: 16px; 
+  font-weight: 600;
+  cursor: pointer; 
+  margin-top: 24px; 
+  text-decoration: none; 
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
 
-.file-info { text-align: center; color: #666; margin-top: 10px; }
-.error { margin-top: 15px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 6px; text-align: center; }
-.spinner { color: #666; font-size: 18px; }
+.btn:disabled { 
+  background: #e0e0e0; 
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn:hover:not(:disabled) { 
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.file-preview {
+  margin-top: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.file-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #333;
+  word-break: break-all;
+}
+
+.file-size {
+  color: #666;
+  font-size: 14px;
+  background: #e9ecef;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.file-thumbnail {
+  max-height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+}
+
+.file-thumbnail img {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+.error { 
+  margin-top: 15px; 
+  padding: 12px 16px; 
+  background: #fee; 
+  color: #c00; 
+  border-radius: 8px; 
+  text-align: center;
+  border: 1px solid #fcc;
+}
+
+.spinner { 
+  color: #666; 
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.spinner::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ddd;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* === СТИЛИ ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЯ (Imgur-style) === */
 .image-viewer {
@@ -34,6 +243,12 @@ input[type="file"] { display: none; }
   border-bottom: 1px solid #333;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .logo {
   font-size: 20px;
   font-weight: bold;
@@ -43,14 +258,33 @@ input[type="file"] { display: none; }
 
 .btn-copy {
   padding: 8px 16px;
-  background: #007bff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
-.btn-copy:hover { background: #0056b3; }
+.btn-copy:hover { 
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Language switcher in header */
+.image-header .language-switcher {
+  position: static;
+}
+
+.image-header .lang-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.image-header .lang-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 
 .image-container {
   flex: 1;
