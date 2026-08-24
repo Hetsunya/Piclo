@@ -1,82 +1,12 @@
 import { useState, useRef, useEffect, type DragEvent } from 'react'
 import { BrowserRouter, Routes, Route, useParams, Link } from 'react-router-dom'
+import { useTranslation, Trans } from 'react-i18next'
 import './index.css'
-
-// Типы для локализации
-type Lang = 'en' | 'ru'
-
-interface Translations {
-  [key: string]: {
-    en: string
-    ru: string
-  }
-}
-
-const translations: Translations = {
-  title: { en: '📸 Piclo Upload', ru: '📸 Piclo Upload' },
-  subtitle: { en: 'Fast image hosting. Max 10MB.', ru: 'Быстрый хостинг изображений. Максимум 10MB.' },
-  dropzone: { en: 'Click or drag image here', ru: 'Нажми или перетащи картинку' },
-  fileSize: { en: 'MB', ru: 'МБ' },
-  uploadBtn: { en: 'Upload', ru: 'Загрузить' },
-  uploading: { en: 'Uploading...', ru: 'Загрузка...' },
-  error: { en: 'Error', ru: 'Ошибка' },
-  copyLink: { en: 'Copy Link', ru: 'Копировать ссылку' },
-  notFound: { en: 'Content not found or expired', ru: 'Содержимое не найдено или срок его жизни истек' },
-  uploadNew: { en: 'Upload new image', ru: 'Загрузить новое изображение' },
-  imageUrl: { en: 'Image available at:', ru: 'Изображение доступно по ссылке:' },
-  logo: { en: '📸 Piclo', ru: '📸 Piclo' },
-}
-
-// Хук для управления языком
-function useLanguage() {
-  const [lang, setLang] = useState<Lang>(() => {
-    // Проверяем localStorage
-    const saved = localStorage.getItem('piclo_lang') as Lang | null
-    if (saved && (saved === 'en' || saved === 'ru')) {
-      return saved
-    }
-    // Определяем язык браузера
-    const browserLang = navigator.language.toLowerCase()
-    if (browserLang.startsWith('ru')) {
-      return 'ru'
-    }
-    return 'en'
-  })
-
-  useEffect(() => {
-    localStorage.setItem('piclo_lang', lang)
-    document.documentElement.lang = lang
-  }, [lang])
-
-  const t = (key: string): string => {
-    return translations[key]?.[lang] || key
-  }
-
-  const toggleLang = () => {
-    setLang(prev => prev === 'en' ? 'ru' : 'en')
-  }
-
-  return { lang, t, toggleLang }
-}
-
-function LanguageSwitcher({ lang, toggleLang }: { lang: Lang; toggleLang: () => void }) {
-  return (
-    <div className="language-switcher">
-      <button 
-        className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
-        onClick={toggleLang}
-        aria-label="Switch language"
-      >
-        <span className="lang-option">EN</span>
-        <span className="lang-divider">/</span>
-        <span className="lang-option">RU</span>
-      </button>
-    </div>
-  )
-}
+import './i18n/i18n'
+import LanguageSwitcher from './components/LanguageSwitcher'
 
 function UploadPage() {
-  const { lang, t, toggleLang } = useLanguage()
+  const { t } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
@@ -133,7 +63,7 @@ function UploadPage() {
   
   return (
     <div className="page-wrapper">
-      <LanguageSwitcher lang={lang} toggleLang={toggleLang} />
+      <LanguageSwitcher />
       
       <div className="container">
         <h1>{t('title')}</h1>
@@ -175,6 +105,13 @@ function UploadPage() {
         </button>
 
         {error && <div className="error">❌ {t('error')}: {error}</div>}
+
+        <div className="terms-notice">
+          <Trans i18nKey="termsAgreement">
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" />
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" />
+          </Trans>
+        </div>
       </div>
     </div>
   )
@@ -182,7 +119,7 @@ function UploadPage() {
 
 function ImageViewer() {
   const { id } = useParams<{ id: string }>()
-  const { lang, t, toggleLang } = useLanguage()
+  const { t } = useTranslation()
   const [imageUrl, setImageUrl] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
@@ -235,7 +172,7 @@ function ImageViewer() {
           >
             {t('copyLink')}
           </button>
-          <LanguageSwitcher lang={lang} toggleLang={toggleLang} />
+          <LanguageSwitcher />
         </div>
       </div>
       <div className="image-container">
@@ -257,8 +194,103 @@ function App() {
       <Routes>
         <Route path="/" element={<UploadPage />} />
         <Route path="/image/:id" element={<ImageViewer />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
     </BrowserRouter>
+  )
+}
+
+function TermsPage() {
+  const { t } = useTranslation()
+  
+  return (
+    <div className="legal-page">
+      <div className="container legal-container">
+        <Link to="/" className="back-link">← {t('uploadNew')}</Link>
+        <h1>{t('termsTitle')}</h1>
+        <p className="last-updated">{t('lastUpdated')}</p>
+        
+        <p>{t('terms.intro')}</p>
+        
+        <h2>{t('terms.section1Title')}</h2>
+        <p>{t('terms.section1Content')}</p>
+        
+        <h2>{t('terms.section2Title')}</h2>
+        <p>{t('terms.section2Intro')}</p>
+        <ul>
+          {(t('terms.section2Points', { returnObjects: true }) as string[]).map((point: string, index: number) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+        <p>{t('terms.section2Prohibited')}</p>
+        <ul>
+          {(t('terms.section2ProhibitedPoints', { returnObjects: true }) as string[]).map((point: string, index: number) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+        
+        <h2>{t('terms.section3Title')}</h2>
+        <p>{t('terms.section3Content')}</p>
+        
+        <h2>{t('terms.section4Title')}</h2>
+        <p>{t('terms.section4Content')}</p>
+        
+        <h2>{t('terms.section5Title')}</h2>
+        <p>{t('terms.section5Content')}</p>
+        
+        <h2>{t('terms.section6Title')}</h2>
+        <p>{t('terms.section6Content')}</p>
+      </div>
+    </div>
+  )
+}
+
+function PrivacyPage() {
+  const { t } = useTranslation()
+  
+  return (
+    <div className="legal-page">
+      <div className="container legal-container">
+        <Link to="/" className="back-link">← {t('uploadNew')}</Link>
+        <h1>{t('privacyTitle')}</h1>
+        <p className="last-updated">{t('lastUpdated')}</p>
+        
+        <p>{t('privacy.intro')}</p>
+        
+        <h2>{t('privacy.section1Title')}</h2>
+        <p>{t('privacy.section1Content')}</p>
+        <ul>
+          {(t('privacy.section1Points', { returnObjects: true }) as string[]).map((point: string, index: number) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+        <p>{t('privacy.section1Future')}</p>
+        
+        <h2>{t('privacy.section2Title')}</h2>
+        <p>{t('privacy.section2Content')}</p>
+        <ul>
+          {(t('privacy.section2Points', { returnObjects: true }) as string[]).map((point: string, index: number) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+        
+        <h2>{t('privacy.section3Title')}</h2>
+        <p>{t('privacy.section3Content')}</p>
+        
+        <h2>{t('privacy.section4Title')}</h2>
+        <p>{t('privacy.section4Content')}</p>
+        
+        <h2>{t('privacy.section5Title')}</h2>
+        <p>{t('privacy.section5Content')}</p>
+        
+        <h2>{t('privacy.section6Title')}</h2>
+        <p>{t('privacy.section6Content')}</p>
+        
+        <h2>{t('privacy.section7Title')}</h2>
+        <p>{t('privacy.section7Content')}</p>
+      </div>
+    </div>
   )
 }
 
