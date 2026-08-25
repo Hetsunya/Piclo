@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type DragEvent } from 'react'
-import { Link, useParams, BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Link, useParams, BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useTranslation, Trans } from 'react-i18next'
 import './index.css'
 import './i18n/i18n'
@@ -23,10 +23,17 @@ export function Header() {
 
 function UploadPage() {
   const { t } = useTranslation()
+  const location = useLocation()
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+    // Извлекаем текущий язык из pathname
+  const pathParts = location.pathname.split('/').filter(Boolean)
+  const currentLng = pathParts.length > 0 && ['en', 'ru'].includes(pathParts[0])
+    ? pathParts[0]
+    : DEFAULT_LANGUAGE
   
   const handleFile = (selected: File | undefined) => {
     if (!selected) return
@@ -68,7 +75,7 @@ function UploadPage() {
         throw new Error(data.error || 'Upload failed')
       }
 
-      window.location.href = `/image/${data.id}`
+         window.location.href = `/${currentLng}/image/${data.id}`
       
     } catch (err: any) {
       setError(err.message)
