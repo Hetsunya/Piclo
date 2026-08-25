@@ -1,9 +1,25 @@
 import { useState, useRef, useEffect, type DragEvent } from 'react'
-import { BrowserRouter, Routes, Route, useParams, Link } from 'react-router-dom'
+import { Link, useParams, BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation, Trans } from 'react-i18next'
 import './index.css'
 import './i18n/i18n'
 import LanguageSwitcher from './components/LanguageSwitcher'
+import LocaleLayout from './components/LocaleLayout'
+import LocalizedLink from './components/LocalizedLink'
+
+const DEFAULT_LANGUAGE = 'ru'
+
+// Header компонент с переключателем языка - используется в Layout
+export function Header() {
+  const { t } = useTranslation()
+  
+  return (
+    <header className="global-header">
+      <LocalizedLink to="/" className="logo-link">{t('logo')}</LocalizedLink>
+      <LanguageSwitcher className="header-switcher" />
+    </header>
+  )
+}
 
 function UploadPage() {
   const { t } = useTranslation()
@@ -63,8 +79,6 @@ function UploadPage() {
   
   return (
     <div className="page-wrapper">
-      <LanguageSwitcher />
-      
       <div className="container">
         <h1>{t('title')}</h1>
         <p className="subtitle">{t('subtitle')}</p>
@@ -108,8 +122,8 @@ function UploadPage() {
 
         <div className="terms-notice">
           <Trans i18nKey="termsAgreement">
-            <Link to="/terms" target="_blank" rel="noopener noreferrer" />
-            <Link to="/privacy" target="_blank" rel="noopener noreferrer" />
+            <LocalizedLink to="/terms" target="_blank" rel="noopener noreferrer" />
+            <LocalizedLink to="/privacy" target="_blank" rel="noopener noreferrer" />
           </Trans>
         </div>
       </div>
@@ -152,9 +166,9 @@ function ImageViewer() {
         <p style={{color: '#666', marginBottom: '24px'}}>
           {t('notFound')}
         </p>
-        <Link to="/" className="btn" style={{display: 'inline-block', width: 'auto', padding: '12px 32px', textDecoration: 'none'}}>
+        <LocalizedLink to="/" className="btn" style={{display: 'inline-block', width: 'auto', padding: '12px 32px', textDecoration: 'none'}}>
           {t('uploadNew')}
-        </Link>
+        </LocalizedLink>
       </div>
     )
   }
@@ -162,7 +176,7 @@ function ImageViewer() {
   return (
     <div className="image-viewer">
       <div className="image-header">
-        <Link to="/" className="logo">{t('logo')}</Link>
+        <LocalizedLink to="/" className="logo">{t('logo')}</LocalizedLink>
         <div className="header-actions">
           <button 
             className="btn-copy" 
@@ -172,7 +186,6 @@ function ImageViewer() {
           >
             {t('copyLink')}
           </button>
-          <LanguageSwitcher />
         </div>
       </div>
       <div className="image-container">
@@ -192,10 +205,19 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<UploadPage />} />
-        <Route path="/image/:id" element={<ImageViewer />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
+        {/* Редирект с корня на дефолтный язык */}
+        <Route path="/" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+        
+        {/* Маршрут с параметром языка - все страницы вложены */}
+        <Route path=":lng" element={<LocaleLayout />}>
+          <Route index element={<UploadPage />} />
+          <Route path="image/:id" element={<ImageViewer />} />
+          <Route path="terms" element={<TermsPage />} />
+          <Route path="privacy" element={<PrivacyPage />} />
+        </Route>
+        
+        {/* Catch-all для несуществующих маршрутов */}
+        <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
       </Routes>
     </BrowserRouter>
   )

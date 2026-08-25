@@ -2,17 +2,41 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 40px 20px; }
 
+/* Глобальный хедер с переключателем языка */
+.global-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.logo-link {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 0.3s ease;
+}
+
+.logo-link:hover {
+  opacity: 0.8;
+}
+
 .page-wrapper {
   max-width: 600px;
-  margin: 0 auto;
+  margin: 80px auto 0;
   position: relative;
 }
 
 .language-switcher {
-  position: absolute;
-  top: -60px;
-  right: 0;
-  z-index: 10;
+  /* Убраны абсолютные стили - теперь используется в хедере */
 }
 
 /* Header switcher variant - positioned inside container */
@@ -20,7 +44,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   position: static;
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .lang-btn {

@@ -25,9 +25,14 @@ i18n
       escapeValue: false,
     },
     detection: {
+      // URL и query строки исключены - теперь этим управляет роутер
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
       lookupLocalStorage: 'piclo_lang',
+    },
+    // Важно: не меняем язык автоматически при изменении языка браузера
+    react: {
+      useSuspense: false,
     },
   });
 
