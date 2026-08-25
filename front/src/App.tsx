@@ -182,27 +182,28 @@ function ImageViewer() {
 
   return (
     <div className="image-viewer">
-      <div className="image-header">
-        <LocalizedLink to="/" className="logo">{t('logo')}</LocalizedLink>
-        <div className="header-actions">
-          <button 
-            className="btn-copy" 
-            onClick={() => {
-              navigator.clipboard.writeText(window.location.href)
-            }}
-          >
-            {t('copyLink')}
-          </button>
+      <div className="image-content">
+        <div className="image-display">
+          <img src={imageUrl} alt="Uploaded" />
         </div>
-      </div>
-      <div className="image-container">
-        <img src={imageUrl} alt="Uploaded" />
-      </div>
-      <div className="image-footer">
-        <p style={{color: '#999', fontSize: '14px'}}>
-          {t('imageUrl')} <br/>
-          <code>{window.location.href}</code>
-        </p>
+        <div className="image-sidebar">
+          <div className="sidebar-content">
+            <h2>{t('shareImage')}</h2>
+            <p className="sidebar-description">{t('imageUrl')}</p>
+            <div className="link-copy-container">
+              <code className="link-code">{window.location.href}</code>
+              <button 
+                className="btn-copy-large" 
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href)
+                }}
+                title={t('copyLink')}
+              >
+                📋 {t('copyLink')}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
