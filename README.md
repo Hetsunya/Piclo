@@ -1,126 +1,81 @@
-# Piclo - Image Management Service
 
-Piclo is a modern image management service built with Go and React. It provides efficient storage, retrieval, and management of images using PostgreSQL and MinIO.
+# Piclo
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
 
-- Image upload and storage
-- Database integration with PostgreSQL
-- Cloud storage with MinIO
-- Background cleanup with TTL worker
-- RESTful API endpoints
-- Responsive web interface
+A modern, high-performance image management service built with Go and React. It provides efficient storage, retrieval, and automatic lifecycle management of images using PostgreSQL and MinIO.
 
-## Technologies Used
+![Screenshot](link-to-screenshot)
 
-### Backend
-- Go 1.21+
-- PostgreSQL
-- MinIO
-- Gorilla Mux for routing
-- pgx for database connection
-- GORM for ORM (if used)
+---
 
-### Frontend
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
+## ⚡️ Quick Start
 
-## Getting Started
+To run the entire stack (Backend, Frontend, PostgreSQL, MinIO), a single command is sufficient. No local installation of Go or Node.js is required for basic usage.
 
-### Prerequisites
-
-- Go 1.21+
-- Node.js 18+
-- Docker and Docker Compose (for development)
-- PostgreSQL
-- MinIO
-
-### Installation
-
-1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd Piclo
+docker-compose up -d
 ```
 
-2. Install backend dependencies:
-```bash
-go mod tidy
-```
+Once running, the services will be available at:
+- **Frontend (UI)**: http://localhost:5173
+- **Backend API**: http://localhost:9090
+- **MinIO Console**: http://localhost:9001 (default credentials: `minioadmin` / `minioadmin`)
 
-3. Install frontend dependencies:
-```bash
-npm install
-```
+---
 
-4. Set up environment variables in `.env` file:
-```bash
-PORT=9090
-DATABASE_URL=postgres://piclo:piclo@localhost:5433/piclo?sslmode=disable
-PUBLIC_URL=http://localhost:9090
-MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=piclo-images
-```
+## ✨ Features
 
-### Running the Application
+- **Reliable Storage**: Seamless integration with MinIO for highly available object storage.
+- **Automated Cleanup (TTL)**: A background worker automatically purges expired images and their database records based on a configurable Time-To-Live.
+- **Strict Validation**: Server-side validation of MIME types and file sizes before processing and storage.
+- **Modern UI**: Intuitive Drag & Drop image upload interface built with React 18, TypeScript, and Vite.
+- **Schema Management**: Database migrations are handled reliably via `golang-migrate`.
 
-#### Development Mode
-```bash
-# Start backend server
-go run cmd/server/main.go
+---
 
-# Start frontend development server
-npm run dev
-```
+## 🔌 API
 
-#### Docker Compose
-```bash
-docker-compose up
-```
+Core service endpoints (base path `/api/v1`):
 
-## API Endpoints
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/images` | Upload a new image (`multipart/form-data`). |
+| `GET` | `/api/v1/images` | Retrieve a paginated list of all uploaded images with metadata. |
+| `GET` | `/api/v1/images/{id}` | Retrieve metadata for a specific image by its unique ID. |
+| `DELETE` | `/api/v1/images/{id}` | Delete an image from both the object storage and the database. |
 
-- `POST /images` - Upload image
-- `GET /images/:id` - Get image by ID
-- `DELETE /images/:id` - Delete image
-- `GET /images` - List all images
+> **Note:** Full interactive API documentation is available via Swagger/OpenAPI at `/swagger/index.html` (when the documentation middleware is enabled).
 
-## Project Structure
+---
 
-```
-.
-├── cmd/                 # Main application entry points
-│   └── server/          # Server main package
-├── internal/            # Internal packages
-│   ├── config/          # Configuration management
-│   ├── handler/         # HTTP handlers and routes
-│   ├── model/           # Data models
-│   ├── repository/      # Database operations
-│   ├── service/         # Business logic
-│   ├── storage/         # Storage operations (MinIO)
-│   └── worker/          # Background workers
-├── front/               # Frontend application
-│   ├── src/             # Source code
-│   ├── public/          # Static assets
-│   └── ...
-├── migrations/          # Database migration files
-├── docker-compose.yml   # Docker Compose configuration
-├── Dockerfile           # Docker build file
-└── README.md            # This file
-```
+## 🛠️ Local Development (Advanced)
 
-## Contributing
+For local development without Docker, ensure you have **Go 1.21+** and **Node.js 18+** installed, along with local instances of PostgreSQL and MinIO.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a pull request
+1. Install dependencies:
+   ```bash
+   go mod tidy
+   cd front && npm install && cd ..
+   ```
 
-## License
+2. Configure environment variables: Create a `.env` file in the root directory with your local PostgreSQL and MinIO connection details (ports, credentials, bucket name).
 
-This project is licensed under the MIT License.
+3. Apply database migrations using `golang-migrate`.
+
+4. Start the development servers in separate terminals:
+   ```bash
+   # Terminal 1: Backend
+   go run cmd/server/main.go
+
+   # Terminal 2: Frontend
+   cd front && npm run dev
+   ```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
